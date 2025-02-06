@@ -40,7 +40,7 @@ export async function searchDomainAction(email: string): Promise<InfectionsSearc
       throw new Error("Unexpected API response structure");
     }
 
-    return jsonResponse.data as InfectionsSearchResponse[];
+    return (jsonResponse.data as InfectionsSearchResponse[]).slice(0, 20);
   } catch (error: unknown) {
     if (error instanceof Error) {
       throw new Error(`Failed to process the request: ${error.message}`);

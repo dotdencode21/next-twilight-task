@@ -24,7 +24,7 @@ export default function FindDomainForm({ onResult }: { onResult: (data: Infectio
 
       setEmail("");
       setIsLoading(false);
-      onResult(data.slice(0, 20));
+      onResult(data);
     } catch (err) {
       setError((err as Error).message || "An unexpected error occurred.");
     } finally {
