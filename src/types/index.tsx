@@ -21,15 +21,11 @@ interface CredentialsInfo {
 }
 
 export interface InfectionsSearchResponse {
-  data: [
-    {
-      id: string;
-      log_checksum: string;
-      log_file_name: string;
-      date: number;
-      stealer_type: string;
-      computer_information: ComputerInformation;
-      credentials: Credentials[];
-    }
-  ];
+  id: string;
+  log_checksum: string;
+  log_file_name: string;
+  date: number;
+  stealer_type: string;
+  computer_information: ComputerInformation;
+  credentials: Credentials[];
 }

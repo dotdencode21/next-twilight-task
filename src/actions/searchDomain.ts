@@ -1,3 +1,4 @@
+import { extractRootDomain } from "@/lib/utils";
 import { InfectionsSearchResponse } from "@/types";
 import { z } from "zod";
 
@@ -5,52 +6,18 @@ const searchDomainSchema = z.object({
   email: z.string().email("Invalid email format").trim().toLowerCase(),
 });
 
-interface SearchDomainActionState {
-  email?: string;
-  errors?: {
-    email?: string[];
-  };
-}
+export async function searchDomainAction(email: string): Promise<InfectionsSearchResponse[]> {
+  const validationResult = searchDomainSchema.safeParse({ email });
+  if (!validationResult.success) {
+    throw new Error(`Validation error: ${validationResult.error.flatten().fieldErrors.email?.join(", ")}`);
+  }
 
-type SearchDomainActionResponse = InfectionsSearchResponse | SearchDomainActionState | Error;
+  const rootDomain = extractRootDomain(email);
+  if (!rootDomain) {
+    throw new Error("Failed to extract root domain");
+  }
 
-function extractRootDomain(email: string): string | null {
-  const rootDomainRegex = /@[^.]+\.(?<rootDomain>[^.]+)$/;
-  const match = email.match(rootDomainRegex);
-  return match?.groups?.rootDomain || null;
-}
-
-export async function searchDomainAction(
-  prevState: SearchDomainActionResponse,
-  formData: FormData
-): Promise<SearchDomainActionResponse> {
   try {
-    const email = formData.get("email") as string;
-
-    if (!email) {
-      return {
-        ...prevState,
-        errors: { email: ["Email is required"] },
-      };
-    }
-
-    const validationResult = searchDomainSchema.safeParse({ email });
-
-    if (!validationResult.success) {
-      return {
-        email,
-        errors: validationResult.error.flatten().fieldErrors,
-      };
-    }
-
-    const rootDomain = extractRootDomain(email);
-    if (!rootDomain) {
-      return {
-        email,
-        errors: { email: ["Failed to extract root domain"] },
-      };
-    }
-
     const response = await fetch("/api/proxy", {
       method: "POST",
       headers: {
@@ -67,15 +34,18 @@ export async function searchDomainAction(
       throw new Error(`API request failed with status ${response.status}: ${errorText}`);
     }
 
-    const { data } = await response.json();
-    return data as InfectionsSearchResponse;
-  } catch (error: unknown) {
-    console.error(error);
+    const jsonResponse = await response.json();
 
-    if (error instanceof Error) {
-      return new Error(`Failed to process the request: ${error.message}`);
+    if (!Array.isArray(jsonResponse.data)) {
+      throw new Error("Unexpected API response structure");
     }
 
-    return new Error("An unexpected error occurred");
+    return jsonResponse.data as InfectionsSearchResponse[];
+  } catch (error: unknown) {
+    if (error instanceof Error) {
+      throw new Error(`Failed to process the request: ${error.message}`);
+    }
+
+    throw new Error("An unexpected error occurred");
   }
 }
